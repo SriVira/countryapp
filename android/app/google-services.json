@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "450172912917",
+    "project_id": "countriesapp-32dfb",
+    "storage_bucket": "countriesapp-32dfb.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:450172912917:android:1ef8d091f7b3f690b5151c",
+        "android_client_info": {
+          "package_name": "com.hsenid.countryapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBdv6g3xO4tcUaXjek5Cw66HdaG1rsOiGQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
