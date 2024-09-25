@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:countryapp/config/graphql_config.dart';
 import 'package:countryapp/models/country_model.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,6 +22,15 @@ class FetchCountries extends CountryEvent {
 
   @override
   List<Object?> get props => [limit, offset];
+}
+
+class SearchCountries extends CountryEvent {
+  final String query;
+
+  const SearchCountries({required this.query});
+
+  @override
+  List<Object?> get props => [query];
 }
 
 class CountryState extends Equatable {
@@ -50,14 +61,14 @@ class CountryError extends CountryState {
 }
 
 class CountryBloc extends Bloc<CountryEvent, CountryState> {
-  final GraphQLClient client;
-  CountryBloc(this.client) : super(CountryInitial()) {
+  CountryBloc() : super(CountryInitial()) {
     on<CountryEvent>((event, emit) async {
-      emit(CountryInitial());
+      final client = GraphQLConfig.initializeClient();
+
       if (event is FetchCountries) {
         emit(CountryLoading());
         try {
-          final result = await client.query(
+          final result = await client.value.query(
             QueryOptions(
               document: gql("""
             query{
@@ -75,14 +86,50 @@ class CountryBloc extends Bloc<CountryEvent, CountryState> {
           if (result.hasException) {
             emit(CountryError(message: result.exception.toString()));
           }
+          emit(CountryLoaded(
+              countries:
+                  countryModelFromJson(jsonEncode(result.data?['countries']))));
+        } on SocketException {
+          emit(CountryError(message: "No Internet Connection"));
+        } on HttpException {
+          emit(CountryError(message: "No Service Found"));
+        } on FormatException {
+          emit(CountryError(message: "Invalid Response Format"));
+        } catch (e) {
+          emit(CountryError(message: e.toString()));
+        }
+      }
 
-          // Parse the data into a list of Country models
-          final List<dynamic> countryJsonList = result.data?['countries'];
-          final List<CountryModel> countries = countryJsonList
-              .map((countryJson) => CountryModel.fromJson(countryJson))
-              .toList();
+      if (event is SearchCountries) {
+        emit(CountryInitial());
+        emit(CountryLoading());
+        try {
+          final result = await client.value.query(QueryOptions(
+            document: gql("""
+              query GetCountries(\$name: String!) {
+                countries(filter: { name: { eq: \$name } }) {
+                  code
+                  name
+                  emoji
+                  currency
+                }
+              }
+            """),
+            variables: {
+              'name':
+                  event.query, // Replace this with your dynamic country name
+            },
+          ));
 
-          emit(CountryLoaded(countries: countries));
+          if (result.hasException) {
+            emit(CountryError(message: result.exception.toString()));
+          }
+
+          print(result);
+
+          emit(CountryLoaded(
+              countries:
+                  countryModelFromJson(jsonEncode(result.data?['countries']))));
         } on SocketException {
           emit(CountryError(message: "No Internet Connection"));
         } on HttpException {

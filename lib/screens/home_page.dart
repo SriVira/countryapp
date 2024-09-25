@@ -1,5 +1,6 @@
 import 'package:countryapp/bloc/country_bloc.dart';
 import 'package:countryapp/controllers/auth_controller.dart';
+import 'package:countryapp/screens/country_details.dart';
 import 'package:countryapp/widgets/primary_search_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,6 +14,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final _debouncer = Debouncer(milliseconds: 1000);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,8 +38,19 @@ class _HomePageState extends State<HomePage> {
       ),
       body: Column(
         children: [
-          const PrimarySearchBar(
+          PrimarySearchBar(
             hintText: "Search Countries",
+            onChanged: (query) {
+              if (query.isEmpty) {
+                BlocProvider.of<CountryBloc>(context)
+                    .add(const FetchCountries());
+              } else {
+                _debouncer.run(() {
+                  BlocProvider.of<CountryBloc>(context)
+                      .add(SearchCountries(query: query));
+                });
+              }
+            },
           ),
           16.height,
           BlocBuilder<CountryBloc, CountryState>(
@@ -48,9 +62,20 @@ class _HomePageState extends State<HomePage> {
                   itemBuilder: (context, index) {
                     final country = state.countries[index];
                     return ListTile(
-                      leading: Text(country.emoji),
+                      leading: Text(
+                        country.emoji,
+                        style: const TextStyle(fontSize: 20),
+                      ),
                       title: Text(country.name),
-                      subtitle: Text(country.currency),
+                      subtitle: Text(country.code),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  CountryDetails(countryModel: country)),
+                        );
+                      },
                     );
                   },
                 ).expand();

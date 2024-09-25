@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
         providers: [
           BlocProvider<CountryBloc>(
               create: (context) =>
-                  CountryBloc(client.value)..add(const FetchCountries())),
+                  CountryBloc()..add(const FetchCountries())),
           BlocProvider<AuthBloc>(create: (context) => AuthBloc()),
         ],
         child: MaterialApp(
