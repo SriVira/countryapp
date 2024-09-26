@@ -1,6 +1,8 @@
 import 'package:countryapp/bloc/country_bloc.dart';
 import 'package:countryapp/controllers/auth_controller.dart';
+import 'package:countryapp/models/country_model.dart';
 import 'package:countryapp/screens/country_details.dart';
+import 'package:countryapp/widgets/Shimmer.dart';
 import 'package:countryapp/widgets/primary_search_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,6 +17,22 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final _debouncer = Debouncer(milliseconds: 1000);
+
+  List<CountryModel> countries = [];
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels ==
+        _scrollController.position.maxScrollExtent) {
+      BlocProvider.of<CountryBloc>(context).add(const FetchCountries());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,14 +71,31 @@ class _HomePageState extends State<HomePage> {
             },
           ),
           16.height,
-          BlocBuilder<CountryBloc, CountryState>(
-            builder: (context, state) {
+          BlocConsumer<CountryBloc, CountryState>(
+            listener: (context, state) {
               if (state is CountryLoaded) {
-                return ListView.builder(
-                  padding: const EdgeInsets.all(0),
-                  itemCount: state.countries.length,
-                  itemBuilder: (context, index) {
-                    final country = state.countries[index];
+                countries.addAll(state.countries);
+                setState(() {});
+              }
+            },
+            builder: (context, state) {
+              return ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(0),
+                itemCount: state is CountryLoading
+                    ? countries.length + 12
+                    : countries.length,
+                itemBuilder: (context, index) {
+                  if (countries.length <= index) {
+                    return ShimmerWidget.rectangular(
+                      width: 100,
+                      shapeBorder: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(8))),
+                      height: 75,
+                      margin: const EdgeInsets.all(4),
+                    );
+                  } else {
+                    final country = countries[index];
                     return ListTile(
                       leading: Text(
                         country.emoji,
@@ -77,12 +112,9 @@ class _HomePageState extends State<HomePage> {
                         );
                       },
                     );
-                  },
-                ).expand();
-              } else if (state is CountryError) {
-                return Center(child: Text(state.message));
-              }
-              return const Center(child: CircularProgressIndicator());
+                  }
+                },
+              ).expand();
             },
           ),
         ],

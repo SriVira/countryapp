@@ -76,7 +76,7 @@ class CountryBloc extends Bloc<CountryEvent, CountryState> {
                 code
                 name 
                 emoji 
-                currency 
+                currency
               }
             }
             """),
@@ -86,9 +86,15 @@ class CountryBloc extends Bloc<CountryEvent, CountryState> {
           if (result.hasException) {
             emit(CountryError(message: result.exception.toString()));
           }
-          emit(CountryLoaded(
-              countries:
-                  countryModelFromJson(jsonEncode(result.data?['countries']))));
+
+          List<CountryModel> countries =
+              countryModelFromJson(jsonEncode(result.data?['countries']));
+
+          if (countries.isNotEmpty) {
+            emit(CountryLoaded(countries: countries));
+          } else {
+            emit(CountryError(message: "No countries."));
+          }
         } on SocketException {
           emit(CountryError(message: "No Internet Connection"));
         } on HttpException {
@@ -106,8 +112,8 @@ class CountryBloc extends Bloc<CountryEvent, CountryState> {
         try {
           final result = await client.value.query(QueryOptions(
             document: gql("""
-              query GetCountries(\$name: String!) {
-                countries(filter: { name: { eq: \$name } }) {
+              query GetCountries(\$query: String!) {
+                countries(filter: { name: { regex: \$query } }) {
                   code
                   name
                   emoji
@@ -116,8 +122,7 @@ class CountryBloc extends Bloc<CountryEvent, CountryState> {
               }
             """),
             variables: {
-              'name':
-                  event.query, // Replace this with your dynamic country name
+              'query': "^${event.query}",
             },
           ));
 
@@ -125,11 +130,14 @@ class CountryBloc extends Bloc<CountryEvent, CountryState> {
             emit(CountryError(message: result.exception.toString()));
           }
 
-          print(result);
+          List<CountryModel> countries =
+              countryModelFromJson(jsonEncode(result.data?['countries']));
 
-          emit(CountryLoaded(
-              countries:
-                  countryModelFromJson(jsonEncode(result.data?['countries']))));
+          if (countries.isNotEmpty) {
+            emit(CountryLoaded(countries: countries));
+          } else {
+            emit(CountryError(message: "No countries."));
+          }
         } on SocketException {
           emit(CountryError(message: "No Internet Connection"));
         } on HttpException {
